@@ -1,10 +1,7 @@
-// UART FULL DUPLEX
-
 #include "project.h"
 
-#define RX_BUFFER_SIZE 7  // Define buffer size for receiving response
+#define RX_BUFFER_SIZE 7 // Define buffer size for receiving response
 
-// Function to calculate CRC
 uint16_t calculateCRC(uint8_t *buffer, int length) {
     uint16_t crc = 0xFFFF;
     for (int pos = 0; pos < length; pos++) {
@@ -23,58 +20,48 @@ uint16_t calculateCRC(uint8_t *buffer, int length) {
 
 int main(void) {
     CyGlobalIntEnable;  // Enable global interrupts
-    UART_Start();       // Start the UART component
-    
-    uint8_t request[] = {0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00};  // Modbus RTU request frame
+    UART_Start();       // Start UART component in full duplex mode
+    UART2_Start();
+
+    uint8_t request[] = {0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00}; // Modbus request frame
 
     for (;;) {
-        // Calculate and add CRC to the request
         uint16_t crc = calculateCRC(request, 6);
-        request[6] = (uint8_t)(crc & 0xFF);       // Low byte of CRC
-        request[7] = (uint8_t)((crc >> 8) & 0xFF); // High byte of CRC
+        request[6] = (uint8_t)(crc & 0xFF);       
+        request[7] = (uint8_t)((crc >> 8) & 0xFF); 
 
-        // Switch to transmit mode
-        //UART_LoadTxConfig();
-
-        // Send request frame
+        // Send request frame in full-duplex
         for (int i = 0; i < 8; i++) {
-            UART_PutChar(request[i]);
+            UART2_PutChar(request[i]);
         }
 
-        // Ensure transmission completes before switching modes
-        while (!(UART_ReadTxStatus() & UART_TX_STS_COMPLETE));
+        CyDelay(100);  // Wait for the response
 
-        CyDelay(10);  // Brief delay before switching to RX mode
-
-        // Switch to receive mode
-        //UART_LoadRxConfig();
-
-        // Wait to allow time for the response
-        CyDelay(100);
-
-        // Check if response received
-        if (UART_GetRxBufferSize() >= RX_BUFFER_SIZE) {
+        // Check if response is ready to be read
+        if (UART2_GetRxBufferSize() >= RX_BUFFER_SIZE) {
             uint8_t response[RX_BUFFER_SIZE];
             for (int i = 0; i < RX_BUFFER_SIZE; i++) {
-                response[i] = UART_GetChar();
+                response[i] = UART2_GetChar();
             }
-
-            // Switch back to transmit mode
-          //  UART_LoadTxConfig();
-
-            // Validate response CRC
-            uint16_t responseCRC = response[5] | (response[6] << 8);
-            if (calculateCRC(response, 6) == responseCRC) {
-                // If CRC is correct, extract data value
+            
+            CyDelay(100);
+            // Validate CRC
+            uint16_t responseCRC = response[5] | (response[6] << 8); //CRC from Slave
+            if (calculateCRC(response, 6) == responseCRC) { // CRC from calculator vs CRC from Slave
                 uint16_t receivedValue = (response[3] << 8) | response[4];
                 UART_PutString("Received value: ");
-                UART_PutChar(receivedValue); // Display received value (as a character, can be modified)
+                //uint8_t apapun = 'y';
+                //UART_PutChar(apapun);
+                UART_PutChar(receivedValue);  // Display received value
             } else {
                 UART_PutString("CRC Error\r\n");
+                UART_PutString("Calculated: ");
+                UART_PutChar(calculateCRC(response, 6));
+                UART_PutString("Respons CRC: ");
+                UART_PutChar(responseCRC);
             }
         }
 
-        // Delay between requests
-        CyDelay(1000);
+        CyDelay(1000);  // Request data every second
     }
 }
