@@ -22,8 +22,9 @@ uint16_t calculateCRC(uint8_t *buffer, int length) {
 int main(void) {
     CyGlobalIntEnable;  // Enable global interrupts
     UART_Start();       // Start the UART component
-    UART2_Start();
+    //UART2_Start();
     
+    uint8 tmpStat;
     uint8_t request[] = {0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00}; // Modbus RTU frame request to read register
 
     for (;;) {
@@ -31,7 +32,8 @@ int main(void) {
         uint16_t crc = calculateCRC(request, 6);
         request[6] = (uint8_t)(crc & 0xFF);       // Low byte of CRC
         request[7] = (uint8_t)((crc >> 8) & 0xFF); // High byte of CRC
-
+        
+        UART_LoadTxConfig();
         // Send request frame
         for (int i = 0; i < 8; i++) {
             UART_PutChar(request[i]);
@@ -39,24 +41,36 @@ int main(void) {
 
         // Delay to allow response to arrive
         CyDelay(100);
-
+        
+        UART_LoadRxConfig();
         // Receive and handle response
-        if (UART2_GetRxBufferSize() >= RX_BUFFER_SIZE) {
+        //if (UART2_GetRxBufferSize() >= RX_BUFFER_SIZE) {
+        if (UART_GetRxBufferSize() >= RX_BUFFER_SIZE) {
             uint8_t response[RX_BUFFER_SIZE];
             for (int i = 0; i < RX_BUFFER_SIZE; i++) {
                 response[i] = UART2_GetChar();
             }
-
+            
+            UART_LoadTxConfig();
             // Calculate CRC of response
             uint16_t responseCRC = response[5] | (response[6] << 8);
             if (calculateCRC(response, 5) == responseCRC) {
                 // If CRC is correct, extract data value
+                
                 uint16_t receivedValue = (response[3] << 8) | response[4];
                 UART_PutString("Received value: ");
                 UART_PutChar(receivedValue); // Display received value (this may be modified as per actual requirements)
             } else {
                 UART_PutString("CRC Error\r\n");
             }
+            
+            do /* wait until transmission complete */
+            { /* Read Status register */
+                tmpStat = UART_ReadTxStatus();
+                /* Check the TX_STS_COMPLETE status bit */
+            }
+            while(~tmpStat & UART_TX_STS_COMPLETE);
+            UART_LoadRxConfig();
         }
 
         // Delay 1 second between requests
