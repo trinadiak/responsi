@@ -101,14 +101,14 @@ int main(void) {
             // FUNCTION CODE: 3 (SENDS REQUEST AND RECEIVES THE REGISTER)
             if (receivedFrame[0] == SLAVE_ADDRESS && receivedFrame[1] == 0x03) {
                 uint16_t calculatedCRC = calculateCRC(receivedFrame, 6);
-                uint16_t receivedCRC = (receivedFrame[7] << 8) | receivedFrame[6];
+                //uint16_t receivedCRC = (receivedFrame[7] << 8) | receivedFrame[6];
+                uint16_t receivedCRC = receivedFrame[6];
 
                 if (calculatedCRC == receivedCRC) {
                   // READ DATA
                     uint16_t registerValue = (receivedFrame[3] << 8) | receivedFrame[4];
                     
                     char decimalString[12];
-                    
                     
                     // PRINT THE SUCCESSFULLY RECEIVED DATA
                     sendString("Decimal: ");
@@ -117,7 +117,6 @@ int main(void) {
                     sendString("\r\n");
                 } else {
                     sendString("CRC Error\r\n");
-                    CySoftwareReset(); // Reset w/o clicking the physical button
                 }
             } else {
                 sendString("Address or Function Code Mismatch\r\n");
@@ -136,6 +135,7 @@ int main(void) {
             UART2_ClearRxBuffer();
         } else {
             sendString("No response received\r\n");
+            CySoftwareReset();
         }
 
         CyDelay(1000);
