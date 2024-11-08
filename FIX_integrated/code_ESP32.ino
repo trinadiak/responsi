@@ -1,13 +1,13 @@
 #define SLAVE_ADDRESS 1
-#define FUNCTION_CODE 3
+#define FUNCTION_CODE_REQ 3
+#define FUNCTION_CODE_RECEIVE 6
 #define REGISTER_ADDRESS 0x0001
-#define REGISTER_VALUE 0x002E  // Example register value to send back
-#define PINR 18
+// #define REGISTER_VALUE 0x002E  // Example register value to send back
 
 void setup() {
   Serial.flush();
   Serial.begin(9600);  // Initialize Serial communication for Modbus at 9600 baud rate
-  delay(1000);  // Allow some time for setup
+  delay(1000);         // Allow some time for setup
 }
 
 uint16_t calculateCRC(uint8_t *buffer, int length) {
@@ -26,48 +26,52 @@ uint16_t calculateCRC(uint8_t *buffer, int length) {
   return crc;
 }
 
-void respondToMaster() {
-  if (Serial.available() >= 8) {  // Check for a full request frame
-    uint8_t request[8];
-    for (int i = 0; i < 8; i++) {
-      request[i] = Serial.read();
-    }
+void sendResponse(int registerValue, uint8_t *frame) {
+    // Calculate CRC for received request
+    uint16_t receivedCRC = (frame[7] << 8) | frame[6];
+    uint16_t calculatedCRC = calculateCRC(frame, 6);
 
-    // Verify address and function code in the received request
-    if (request[0] == SLAVE_ADDRESS && request[1] == FUNCTION_CODE) {
-      // Calculate CRC for received request
-      uint16_t receivedCRC = (request[7] << 8) | request[6];
-      uint16_t calculatedCRC = calculateCRC(request, 6);
-
-      if (calculatedCRC == receivedCRC) {
+    if (calculatedCRC == receivedCRC) {
         // Construct response frame with function code 3
         uint8_t response[8];
         response[0] = SLAVE_ADDRESS;                // Slave address
-        response[1] = FUNCTION_CODE;                // Function code 3 (read holding registers)
+        response[1] = FUNCTION_CODE_REQ;            // Function code 3 (read holding registers)
         response[2] = 2;                            // Byte count (1 register = 2 bytes)
-        response[3] = (REGISTER_VALUE >> 8) & 0xFF; // High byte of register value
-        response[4] = REGISTER_VALUE & 0xFF;        // Low byte of register value
+        response[3] = (registerValue >> 8) & 0xFF;  // High byte of register value
+        response[4] = registerValue & 0xFF;         // Low byte of register value
 
         // Calculate CRC for the response
         uint16_t responseCRC = calculateCRC(response, 5);
         response[5] = responseCRC & 0xFF;           // Low byte of CRC
         response[6] = (responseCRC >> 8) & 0xFF;    // High byte of CRC
 
-        // Send response frame back to the master
+        // Send response to master
         Serial.write(response, sizeof(response));
-
-      } else {
-        // CRC error in the received request (could handle error here if needed)
-        // Serial.println("CRC Error in Request");
-      }
     } else {
-      // Address or function code mismatch
-      // Serial.println("Address or Function Code Mismatch in Request");
+        // Optional: Handle CRC error (if needed)
     }
-  }
+}
+
+int receiveValue(uint8_t *frame) {
+    int data = (frame[4] << 8) | frame[5];
+    return data;
 }
 
 void loop() {
-  respondToMaster();
-  delay(100);  // Small delay to avoid rapid polling
+    if (Serial.available() >= 8) {  // Check for a full request frame
+        uint8_t frame[8];
+        for (int i = 0; i < 8; i++) {
+            frame[i] = Serial.read();
+        }
+
+        if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_REQ) {
+            sendResponse(REGISTER_VALUE, frame);
+        }
+        else if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_RECEIVE) {
+            int receivedVal = receiveValue(frame);
+            // process the value
+        }
+    }
+    Serial.flush();
+    delay(100);  // Small delay to avoid rapid polling
 }
