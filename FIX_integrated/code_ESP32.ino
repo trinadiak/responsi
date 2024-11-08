@@ -56,15 +56,6 @@ void respondToMaster() {
         // Send response frame back to the master
         Serial.write(response, sizeof(response));
 
-        // !!! ---- DONT UNCOMMENT WITHOUT SOFTWARE SERIAL ---- !!!
-        // Debugging: print the response in hexadecimal format
-        // Serial.println("Sent Response:");
-        // for (int i = 0; i < 8; i++) {
-        //   if (response[i] < 0x10) Serial.print("0");  // Add leading zero for single-digit hex values
-        //   Serial.print(response[i], HEX);
-        //   Serial.print(" ");
-        // }
-        // Serial.println();
       } else {
         // CRC error in the received request (could handle error here if needed)
         // Serial.println("CRC Error in Request");
@@ -73,7 +64,6 @@ void respondToMaster() {
       // Address or function code mismatch
       // Serial.println("Address or Function Code Mismatch in Request");
     }
-    digitalWrite(PINR, LOW);
   }
 }
 
