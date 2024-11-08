@@ -8,7 +8,6 @@ void setup() {
   Serial.flush();
   Serial.begin(9600);  // Initialize Serial communication for Modbus at 9600 baud rate
   delay(1000);  // Allow some time for setup
-  digitalWrite(PINR, LOW);
 }
 
 uint16_t calculateCRC(uint8_t *buffer, int length) {
@@ -34,7 +33,6 @@ void respondToMaster() {
       request[i] = Serial.read();
     }
 
-    digitalWrite(PINR, HIGH); // enable drive
     // Verify address and function code in the received request
     if (request[0] == SLAVE_ADDRESS && request[1] == FUNCTION_CODE) {
       // Calculate CRC for received request
