@@ -12,11 +12,27 @@ sprintf(inputHex, "%02X", inputByte);
 
 */
 
+uint16_t calculateCRC(uint8_t *buffer, int length) {
+    uint16_t crc = 0xFFFF;
+    for (int pos = 0; pos < length; pos++) {
+        crc ^= buffer[pos];
+        for (int i = 8; i != 0; i--) {
+            if ((crc & 0x0001) != 0) {
+                crc >>= 1;
+                crc ^= 0xA001;
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+    return crc;
+}
+
 // --- MODBUS ---
 void sendModbusFrame(uint8_t slaveAddress, uint8_t functionCode, uint16_t registerAddress, uint16_t data) {
     uint8_t frame[8];  // Modbus frame
 
-    if (functionCode == 0x06){
+    if (functionCode == 0x06){ // function code 6: only send register (data)
         frame[0] = slaveAddress;
         frame[1] = functionCode;
         frame[2] = (uint8_t)(registerAddress >> 8); // High byte of register address
@@ -29,7 +45,7 @@ void sendModbusFrame(uint8_t slaveAddress, uint8_t functionCode, uint16_t regist
         frame[6] = (uint8_t)(crc & 0xFF);       // Low byte of CRC
         frame[7] = (uint8_t)((crc >> 8) & 0xFF); // High byte of CRC
     }
-    else if (functionCode == 3){
+    else if (functionCode == 3){ // function code 3: request data
         frame[0] = slaveAddress;
         frame[1] = functionCode;
         frame[2] = (uint8_t)(registerAddress >> 8); // High byte of register address
@@ -48,22 +64,6 @@ void sendModbusFrame(uint8_t slaveAddress, uint8_t functionCode, uint16_t regist
     }
     CyDelay(100);
 
-}
-
-uint16_t calculateCRC(uint8_t *buffer, int length) {
-    uint16_t crc = 0xFFFF;
-    for (int pos = 0; pos < length; pos++) {
-        crc ^= buffer[pos];
-        for (int i = 8; i != 0; i--) {
-            if ((crc & 0x0001) != 0) {
-                crc >>= 1;
-                crc ^= 0xA001;
-            } else {
-                crc >>= 1;
-            }
-        }
-    }
-    return crc;
 }
 
 // Serial monitor purpose
@@ -86,9 +86,11 @@ int main(void) {
     
 
     for (;;) {
+        
+        // ---- TRANSMIT DATAAA ----
         sendModbusFrame(1, 6, REGISTER_ADDRESS, 45); // 1-way data transmission
         CyDelay(1000);
-        sendModbusFrame(1, 3, REGISTER_ADDRESS, 1); // request sending
+        sendModbusFrame(1, 3, REGISTER_ADDRESS, 0); // request sending
 
         CyDelay(500);
 
@@ -101,14 +103,15 @@ int main(void) {
             // FUNCTION CODE: 3 (SENDS REQUEST AND RECEIVES THE REGISTER)
             if (receivedFrame[0] == SLAVE_ADDRESS && receivedFrame[1] == 0x03) {
                 uint16_t calculatedCRC = calculateCRC(receivedFrame, 6);
-                //uint16_t receivedCRC = (receivedFrame[7] << 8) | receivedFrame[6];
+                //uint16_t receivedCRC = receivedFrame[6] | (receivedFrame[7] << 8);
                 uint16_t receivedCRC = receivedFrame[6];
 
                 if (calculatedCRC == receivedCRC) {
-                  // READ DATA
+                  // --- READ THE RECEIVED DATA ---
                     uint16_t registerValue = (receivedFrame[3] << 8) | receivedFrame[4];
                     
                     char decimalString[12];
+                    
                     
                     // PRINT THE SUCCESSFULLY RECEIVED DATA
                     sendString("Decimal: ");
@@ -117,6 +120,39 @@ int main(void) {
                     sendString("\r\n");
                 } else {
                     sendString("CRC Error\r\n");
+                    
+                    // DEBUGGING CRC ERROR
+                    char front[10];
+                    sendString("Received CRC[6]: ");
+                    sprintf(front, "%04X", receivedFrame[6]);  // Format as hexadecimal, 4 digits
+                    sendString(front);
+                    sendString("\r\n");
+                    //debugCalculateCRC(receivedFrame, 6);
+                    
+                    char crcBuffer[10];  // Buffer to hold the formatted CRC values
+
+                    sendString("Calculated CRC: ");
+                    sprintf(crcBuffer, "%04X", calculatedCRC);  // Format as hexadecimal, 4 digits
+                    sendString(crcBuffer);
+                    sendString("\r\n");
+
+                    sendString("Received CRC: ");
+                    sprintf(crcBuffer, "%04X", receivedCRC);  // Format as hexadecimal, 4 digits
+                    sendString(crcBuffer);
+                    sendString("\r\n");
+                    
+                    uint16_t registerValue = (receivedFrame[3] << 8) | receivedFrame[4];
+                    
+                    char decimalString[12];
+                    
+                    
+                    // PRINT THE SUCCESSFULLY RECEIVED DATA
+                    sendString("Decimal error: ");
+                    sprintf(decimalString, "%u", registerValue);
+                    UART_PutString(decimalString);
+                    sendString("\r\n");
+
+                    //CySoftwareReset(); // Reset w/o clicking the physical button
                 }
             } else {
                 sendString("Address or Function Code Mismatch\r\n");
