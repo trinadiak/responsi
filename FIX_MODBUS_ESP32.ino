@@ -2,11 +2,12 @@
 #define FUNCTION_CODE_REQ 3
 #define FUNCTION_CODE_RECEIVE 6
 #define REGISTER_ADDRESS 0x0001
-// #define REGISTER_VALUE 0x002E  // Example register value to send back
+#define REGISTER_VALUE 0x002E  // Example register value to send back
 
 void setup() {
   Serial.flush();
   Serial.begin(9600);  // Initialize Serial communication for Modbus at 9600 baud rate
+  Serial2.begin(9600, SERIAL_8N1, 17, 16); // COMMUNICATION
   delay(1000);         // Allow some time for setup
 }
 
@@ -46,9 +47,10 @@ void sendResponse(int registerValue, uint8_t *frame) {
         response[6] = (responseCRC >> 8) & 0xFF;    // High byte of CRC
 
         // Send response to master
-        Serial.write(response, sizeof(response));
+        Serial2.write(response, sizeof(response));
     } else {
         // Optional: Handle CRC error (if needed)
+        Serial.println("CRC unmatched");
     }
 }
 
@@ -58,20 +60,22 @@ int receiveValue(uint8_t *frame) {
 }
 
 void loop() {
-    if (Serial.available() >= 8) {  // Check for a full request frame
+    if (Serial2.available() >= 8) {  // Check for a full request frame
         uint8_t frame[8];
         for (int i = 0; i < 8; i++) {
-            frame[i] = Serial.read();
+            frame[i] = Serial2.read();
         }
 
         if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_REQ) {
             sendResponse(REGISTER_VALUE, frame);
+            Serial.println("Sent");
         }
         else if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_RECEIVE) {
             int receivedVal = receiveValue(frame);
+            Serial.println(receivedVal);
             // process the value
         }
     }
-    Serial.flush();
+    Serial2.flush();
     delay(100);  // Small delay to avoid rapid polling
 }
