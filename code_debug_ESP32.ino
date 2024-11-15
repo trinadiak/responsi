@@ -13,7 +13,7 @@ void setup() {
   Serial.begin(9600); // FOR SERIAL MONITOR (DEBUGGING)
   Serial2.begin(9600, SERIAL_8N1, 17, 16); // Serial2 for COMMUNICATION --- UNCOMMENT FOR DEBUGGING USING ESP32-S3 ONLY!!!!
 
-  // Connect to Wi-Fi
+  // ----- CONNECT TO WIFI -----
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
