@@ -116,36 +116,41 @@ void checkForModbusRequest() {
         for (int i = 0; i < 8; i++) {
             frame[i] = Serial2.read();
         }
-
-        // FUNCTION CODE 3: RECEIVE EMPTY DATAFRAME AND SEND BACK THE EXPECTED VALUE
-        if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_REQ) {
-            sendResponse(REGISTER_VALUE, frame);
-        }
         // FUNCTION CODE 6: RECEIVE DATA VALUE FROM PSOC
-        else if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_RECEIVE) {
+        if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_RECEIVE) {
+            receiveVoucherCodeFromFlask();
             receivedModbusCode = receiveModbusValue(frame);
             Serial.print("Received Modbus code from PSoC: ");
             Serial.println(receivedModbusCode);
+        }
+        
+        // FUNCTION CODE 3: RECEIVE EMPTY DATAFRAME AND SEND BACK THE EXPECTED VALUE
+        else if (frame[0] == SLAVE_ADDRESS && frame[1] == FUNCTION_CODE_REQ) {
+            // sendResponse(1, frame);
+            compareCodes();
         }
     }
 }
 
 void compareCodes() {
     if (receivedModbusCode == voucher_code) {
+        sendResponse(1, frame);
         Serial.println("Codes Match!");
     } else {
+        sendResponse(0, frame);
         Serial.println("Codes Do Not Match.");
+        
     }
 }
 
 void loop() {
-    receiveVoucherCodeFromFlask();   // Fetch the voucher code via HTTP from Flask server
-    delay(2000);                     // Wait before checking Modbus communication
+    // receiveVoucherCodeFromFlask();   // Fetch the voucher code via HTTP from Flask server
+    // delay(2000);                     // Wait before checking Modbus communication
     checkForModbusRequest();         // Check for Modbus communication from PSoC
-    
-    if (receivedModbusCode != 0 && voucher_code != 0) {
-        compareCodes();              // Compare codes after both are received
-    }
+    // compareCodes();
+    // if (receivedModbusCode != 0 && voucher_code != 0) {
+    //     compareCodes();              // Compare codes after both are received
+    // }
     
     delay(5000);                     // Small delay between loops
 }
