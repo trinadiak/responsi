@@ -113,9 +113,10 @@ int main(void)
     UART_Start();          // Serial monitor
     UART2_Start();
 
-    
-    uint8_t combinedData1 = 0; // Variabel untuk menyimpan data 4 bit yang digabungkan
-    uint8_t combinedData2 = 0;
+    // Variabel untuk menyimpan data 4 bit yang digabungkan
+    // ?? WHY NEGATIVE?? ada kemungkinan kode vouchernya 00
+    uint8_t combinedData1 = -1; 
+    uint8_t combinedData2 = -1;
 
     char hexString[3];
     uint8_t receivedFrame[RX_BUFFER_SIZE];
@@ -136,7 +137,9 @@ int main(void)
         CyDelay(1000); // Delay 1 detik sebelum mengulangi pembacaan
 
         // Memeriksa apakah tombol Enter ditekan
-        if (Tombol_3_Read() == 0) // Anggap tombol enter aktif low (0 = ditekan)
+        // Anggap tombol enter aktif low (0 = ditekan)
+        // Set state ke -1 jika tidak ada data yang di-enter
+        if (Tombol_3_Read() == 0 && combinedData1 != -1 && combinedData2 != -1) 
         {
             // Membaca data biner dari pin output
             uint8_t binaryData1 = combinedData1;
@@ -169,7 +172,9 @@ int main(void)
             
             // Tunggu sampai tombol dilepaskan untuk menghindari pengiriman berulang
             while (Tombol_3_Read() == 0);
-            
+
+            combinedData1 = -1;
+            combinedData2 = -1;
         }
 
         // ---------- RECEIVE DATA ----------------
@@ -189,7 +194,9 @@ int main(void)
                     uint16_t registerValue = (receivedFrame[3] << 8) | receivedFrame[4];
                     
                     char decimalString[12];
-                    
+
+                    // ISI LIST (ubah hex dari registerValue jadi 2 digit integer terpisah, LALU
+                    // masukin ke list)
                     
                     // PRINT THE SUCCESSFULLY RECEIVED DATA
                     sendString("Decimal: ");
