@@ -58,16 +58,16 @@ void receiveVoucherCodeFromFlask() {
             DeserializationError error = deserializeJson(doc, payload);
             if (!error) {
                 voucher_code = doc["user_voucher"].as<uint16_t>();
-                Serial.println("Voucher code received: " + String(voucher_code));
+//                Serial.println("Voucher code received: " + String(voucher_code));
             } else {
-                Serial.println("Failed to parse JSON.");
+//                Serial.println("Failed to parse JSON.");
             }
         } else {
-            Serial.println("GET request failed. HTTP code: " + String(httpResponseCode));
+//            Serial.println("GET request failed. HTTP code: " + String(httpResponseCode));
         }
         http.end();
     } else {
-        Serial.println("Wi-Fi not connected. Cannot fetch voucher code.");
+//        Serial.println("Wi-Fi not connected. Cannot fetch voucher code.");
     }
 }
 
@@ -88,13 +88,13 @@ void updateFlaskStatus(int newVoucherChange, int newVoucherEligible) {
 
         int httpResponseCode = http.POST(payload);
         if (httpResponseCode == 200) {
-            Serial.println("HTTP POST successful.");
+//            Serial.println("HTTP POST successful.");
         } else {
-            Serial.println("HTTP POST failed. Code: " + String(httpResponseCode));
+//            Serial.println("HTTP POST failed. Code: " + String(httpResponseCode));
         }
         http.end();
     } else {
-        Serial.println("Wi-Fi not connected. Cannot send data.");
+//        Serial.println("Wi-Fi not connected. Cannot send data.");
     }
 }
 
@@ -136,13 +136,14 @@ void sendResponse(int registerValue, uint8_t* frame) {
 
 void compareCodes() {
     // Check if the voucher code is 0, if so, ignore it
+    Serial.println(receivedModbusCode);
     if (voucher_code == 0) {
-        Serial.println("Voucher code is 0, ignoring...");
+        //Serial.println("Voucher code is 0, ignoring...");
         return; // Exit the function if voucher code is 0
     }
     
-    Serial.print("Comparing Modbus code: ");
-    Serial.print(receivedModbusCode);
+//    Serial.print("Comparing Modbus code: ");
+//    Serial.print(receivedModbusCode);
     Serial.print(" with Voucher code: ");
     Serial.println(voucher_code);
 
@@ -153,23 +154,23 @@ void compareCodes() {
             updateFlaskStatus(2, 1);  // Send the update to Flask server
         }
         failedAttempts = 0;  // Reset failed attempts if codes match
-        Serial.println("Failed attempts reset to 0.");
+//        Serial.println("Failed attempts reset to 0.");
     } else {
         failedAttempts++;
         Serial.print("Failed attempts: ");
-        Serial.println(failedAttempts);
+//        Serial.println(failedAttempts);
 
         if (failedAttempts >= 3) {
             if (status != 10) {
                 status = 10;
-                Serial.println("Status updated to 10 after 3 failed attempts.");
+//                Serial.println("Status updated to 10 after 3 failed attempts.");
                 updateFlaskStatus(1, 0);  // Send the update to Flask server
             }
             failedAttempts = 0;  // Reset the failed attempts after sending update
-            Serial.println("Failed attempts reset to 0 after update.");
+//            Serial.println("Failed attempts reset to 0 after update.");
 
             // Restart the ESP32
-            Serial.println("Restarting ESP32...");
+//            Serial.println("Restarting ESP32...");
             ESP.restart();  // Reset the ESP32 after 3 failed attempts
         }
     }
