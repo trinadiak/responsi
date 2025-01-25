@@ -1,5 +1,5 @@
 # Customer Loyalty Subsystem
-__<p align="center">Final codes [here]<br><br>__
+__<p align="center">Final codes [here](https://github.com/trinadiak/responsi/tree/main/Responsi_3_B)<br><br>__
 <img src="https://github.com/trinadiak/responsi/blob/main/Responsi_3_B/hardware.jpg" width="280" height="350"><br> _Fig 1. The hardware_ </p></br>
 The Customer Loyalty Subsystem is a part of the _vending machine_ project designed to verify customer loyalty by validating voucher codes entered by the buyer. This system ensures that customers can use their vouchers correctly, enhancing interaction and the shopping experience with the vending machine. The subsystem employs two main microcontroller components: ESP32 and PSoC.<br>
 <p align="center"><img src="https://github.com/trinadiak/responsi/blob/main/Responsi_3_B/block%20diagram%20loyalty.png" width="600" height="350"><br>Fig 2. Functional block diagram</p><br>
